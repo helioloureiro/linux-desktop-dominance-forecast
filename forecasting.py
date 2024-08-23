@@ -29,7 +29,7 @@ plt.ylabel('Percentage of desktops')
 plt.xlabel('Date')
 plt.xticks(rotation=45)
 plt.plot(dt.index, dt['Linux'], )
-plt.show()
+# plt.show()
 
 train = dt[dt.index < pd.to_datetime("2024-01-01", format='%Y-%m-%d')]
 test = dt[dt.index >= pd.to_datetime("2024-01-01", format='%Y-%m-%d')]
@@ -43,65 +43,30 @@ plt.title("Train/Test split for Desktop domination")
 
 y = train['Linux']
 
-ARMAmodel = SARIMAX(y, order = (1, 0, 1))
-ARMAmodel = ARMAmodel.fit()
-
-y_pred = ARMAmodel.get_forecast(len(test.index))
-y_pred_df = y_pred.conf_int(alpha = 0.05) 
-y_pred_df["Predictions"] = ARMAmodel.predict(start = y_pred_df.index[0], end = y_pred_df.index[-1])
-y_pred_df.index = test.index
-y_pred_out = y_pred_df["Predictions"] 
-plt.plot(y_pred_out, color='green', label = 'ARMA Predictions')
-plt.legend()
-
-
-import numpy as np
-from sklearn.metrics import mean_squared_error
-
-arma_rmse = np.sqrt(mean_squared_error(test["Linux"].values, y_pred_df["Predictions"]))
-print("ARMA RMSE: ",arma_rmse)
-
-
-
-
-ARIMAmodel = ARIMA(y, order = (5, 4, 2))
-ARIMAmodel = ARIMAmodel.fit()
-
-y_pred = ARIMAmodel.get_forecast(len(test.index))
-y_pred_df = y_pred.conf_int(alpha = 0.05) 
-y_pred_df["Predictions"] = ARIMAmodel.predict(start = y_pred_df.index[0], end = y_pred_df.index[-1])
-y_pred_df.index = test.index
-y_pred_out = y_pred_df["Predictions"] 
-plt.plot(y_pred_out, color='Yellow', label = 'ARIMA Predictions')
-plt.legend()
-
-
-import numpy as np
-from sklearn.metrics import mean_squared_error
-
-arma_rmse = np.sqrt(mean_squared_error(test["Linux"].values, y_pred_df["Predictions"]))
-print("ARIMA RMSE: ",arma_rmse)
-
-
-
 SARIMAXmodel = SARIMAX(y, order = (5, 4, 2), seasonal_order=(2,2,2,12))
 SARIMAXmodel = SARIMAXmodel.fit()
 
-y_pred = SARIMAXmodel.get_forecast(len(test.index))
-y_pred_df = y_pred.conf_int(alpha = 0.05) 
-y_pred_df["Predictions"] = SARIMAXmodel.predict(start = y_pred_df.index[0], end = y_pred_df.index[-1])
-y_pred_df.index = test.index
-y_pred_out = y_pred_df["Predictions"] 
-plt.plot(y_pred_out, color='Blue', label = 'SARIMA Predictions')
-plt.legend()
+months_to_predict=1
+isYearFound = False
+while not isYearFound:
+    future_dates = pd.date_range("2024-01-01", periods=months_to_predict, freq='ME')
+    future_df = pd.DataFrame(future_dates)
+    future_df.index = pd.to_datetime(future_dates, format="%Y-%m-%d")
+    y_pred = SARIMAXmodel.get_forecast(len(future_df))
+    y_pred_df = y_pred.conf_int(alpha = 0.05) 
+    y_pred_df["Predictions"] = SARIMAXmodel.predict(start = y_pred_df.index[0], end = y_pred_df.index[-1])
+    y_pred_df.index = future_df.index
+    y_pred_out = y_pred_df["Predictions"] 
+    plt.plot(y_pred_out, color='Blue', label = 'Desktop Predictions')
+    # plt.legend()
+    
+    for k, v in y_pred_out.items():
+        if v >= 100:
+            print("The year of Linux on the Desktop:", k)
+            isYearFound = True
+            break
+    months_to_predict+=1
 
-
-import numpy as np
-from sklearn.metrics import mean_squared_error
-
-arma_rmse = np.sqrt(mean_squared_error(test["Linux"].values, y_pred_df["Predictions"]))
-print("SARIMA RMSE: ",arma_rmse)
-
-plt.show()
+# plt.show()
 plt.savefig("linux-growth.png")
 
